@@ -21,34 +21,36 @@ Vagrant.configure(2) do |config|
   packages << %w(wget curl) #for downloading stuff
   packages << %w(nodejs-devel yarn) #nodejs for compiling rails assets
   packages << %w(devtoolset-6-gcc-c++ devtoolset-6-gcc) #to compile stuff via rubygems, npm etc
-  packages << %w(rh-ruby22 rh-ruby22-ruby-devel rh-ruby22-rubygem-bundler rh-ruby22-ruby-irb rh-ruby22-rubygem-rake rh-ruby22-rubygem-psych libffi-devel) #ruby needed for fpm
+  packages << %w(rh-ruby23 rh-ruby23-ruby-devel rh-ruby23-rubygem-bundler rh-ruby23-ruby-irb rh-ruby23-rubygem-rake rh-ruby23-rubygem-psych libffi-devel) #ruby needed for fpm
 
   config.vm.provision :shell, inline: <<-SHELL
   set -ex
+  echo 'sslverify=false' >> /etc/yum.conf
   echo '
 [nsis]
 name=nsis
-baseurl=https://gocd.github.io/nsis-rpm/
+baseurl=http://gocd.github.io/nsis-rpm/
 gpgcheck=0
+sslverify=0
 ' > /etc/yum.repos.d/nsis.repo
 
   echo '
 [nodesource]
 name=Node.js Packages for Enterprise Linux $releasever - $basearch
-baseurl=https://rpm.nodesource.com/pub_6.x/el/$releasever/$basearch
+baseurl=http://rpm.nodesource.com/pub_6.x/el/$releasever/$basearch
 enabled=1
 gpgcheck=1
-gpgkey=https://rpm.nodesource.com/pub/el/NODESOURCE-GPG-SIGNING-KEY-EL
-sslverify=true
+gpgkey=http://rpm.nodesource.com/pub/el/NODESOURCE-GPG-SIGNING-KEY-EL
+sslverify=0
 ' > /etc/yum.repos.d/nodesource.repo
 
-  wget -q https://dl.yarnpkg.com/rpm/yarn.repo -O /etc/yum.repos.d/yarn.repo
+  wget -q http://dl.yarnpkg.com/rpm/yarn.repo -O /etc/yum.repos.d/yarn.repo
 
-  yum install -y epel-release centos-release-scl
+  yum install -y centos-release-scl
   yum install -y #{packages.flatten.join(' ')}
 
-  echo 'source /opt/rh/rh-ruby22/enable' > /etc/profile.d/ruby-22.sh
-  echo 'export PATH=/opt/rh/rh-ruby22/root/usr/local/bin:$PATH' >> /etc/profile.d/ruby-22.sh
+  echo 'source /opt/rh/rh-ruby23/enable' > /etc/profile.d/ruby-23.sh
+  echo 'export PATH=/opt/rh/rh-ruby23/root/usr/local/bin:$PATH' >> /etc/profile.d/ruby-23.sh
 
   # remove a sudo binary that messes things up
   rm -f /opt/rh/devtoolset-6/root/usr/bin/sudo
@@ -56,11 +58,11 @@ sslverify=true
   echo 'source /opt/rh/devtoolset-6/enable' > /etc/profile.d/gcc.sh
   echo 'PATH=$PATH:/opt/rh/devtoolset-6/root/usr/bin' >> /etc/profile.d/gcc.sh
 
-  (source /opt/rh/rh-ruby22/enable; gem install fpm --no-ri --no-rdoc)
+  (source /etc/profile.d/ruby-23.sh; source /etc/profile.d/gcc.sh; gem install fpm --no-ri --no-rdoc)
   SHELL
 
   config.vm.provider :virtualbox do |vb, override|
-    override.vm.box = "boxcutter/centos67"
+    override.vm.box = "bento/centos-6.7"
 
     vb.gui          = ENV['GUI'] || false
     vb.memory       = ((ENV['MEMORY'] || 4).to_f * 1024).to_i
